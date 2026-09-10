@@ -14,8 +14,10 @@ requires = [
     "Cython >= 3.2",
     # Included here for seamless wheel builds.
     # Packagers can choose to replace it by externally provided
-    # c-blosc2 library and headers
-    "blosc2 >= 3.2.0",
+    # c-blosc2 library and headers.
+    # Excluded on Windows ARM64: no win_arm64 wheel exists and it cannot
+    # build from source there so we get c-blosc2 via vcpkg.
+    "blosc2 >= 3.2.0; sys_platform != 'win32' or platform_machine != 'ARM64'",
 ]
 build-backend = "setuptools.build_meta"
 # build-backend = "mesonpy"  # and replace ``setuptools`` above
@@ -78,7 +80,9 @@ dependencies = [
     "numexpr >= 2.6.2",
     "packaging",
     "py-cpuinfo",
-    "blosc2 >= 2.3.0",
+    # ``tables`` only uses the c-blosc2 C library, which is vendored into the
+    # wheel, so this is dropped where the Python package is unavailable.
+    "blosc2 >= 2.3.0; sys_platform != 'win32' or platform_machine != 'ARM64'",
 ]
 
 
@@ -197,6 +201,14 @@ repair-wheel-command = [
 
 [tool.cibuildwheel.windows.environment]
 DISABLE_AVX2 = "TRUE"
+
+# Same as the Windows ``before-build`` minus the ``requirements.txt`` install:
+# it pins blosc2, which has no win_arm64 wheel. c-blosc2 comes from vcpkg instead.
+[[tool.cibuildwheel.overrides]]
+select = "*-win_arm64"
+before-build = [
+    "python -m pip install abi3audit delvewheel",
+]
 
 [tool.black]
 line-length = 79
